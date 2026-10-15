@@ -1,6 +1,10 @@
 @font-face{font-family:Vazirmatn;font-weight:400;font-display:swap;src:url(./Vazirmatn-Regular.woff2) format("woff2")}
 @font-face{font-family:Vazirmatn;font-weight:500;font-display:swap;src:url(./Vazirmatn-Medium.woff2) format("woff2")}
 @font-face{font-family:Vazirmatn;font-weight:700;font-display:swap;src:url(./Vazirmatn-Bold.woff2) format("woff2")}
+/* فونت‌های B: سیستمی (local) یا فایل ttf کنار برنامه؛ برای بررسی «نصب بودن» در تنظیمات */
+@font-face{font-family:"B Nazanin";src:local("B Nazanin"),local("BNazanin"),url(BNazanin.ttf) format("truetype")}
+@font-face{font-family:"B Mitra";src:local("B Mitra"),local("BMitra"),url(BMitra.ttf) format("truetype")}
+@font-face{font-family:"B Titr";src:local("B Titr"),local("BTitr"),url(BTitr.ttf) format("truetype")}
 
 :root{
   --primary:#0E6F68; --primary-d:#0A5752; --accent:#14B8A6; --text:#1D2B3A; --muted:#5B6B7B;
@@ -166,8 +170,8 @@ tr.tot td{background:var(--stripe);font-weight:700;border-top:2px solid var(--pr
 .print-pv{position:sticky;top:64px;min-width:0}
 .pv-bar{display:flex;gap:.7rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap}
 .pv-bar select{width:auto;min-width:180px}
-.pv-box{background:#8b95a1;border:1px solid var(--line);border-radius:var(--r);padding:8px;overflow:auto;max-height:calc(100vh - 150px);min-height:200px}
-.modal .pv-box{max-height:68vh}
+.pv-box{background:#8b95a1;border:1px solid var(--line);border-radius:var(--r);padding:8px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;max-height:calc(100vh - 150px);min-height:200px}
+.modal .pv-box{max-height:calc(92vh - 230px)}
 .pv-holder{position:relative;margin:0 auto}
 .pv-frame{position:absolute;top:0;left:0;border:0;background:#fff;transform-origin:0 0}
 .psec{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
@@ -212,3 +216,12 @@ tr.tot td{background:var(--stripe);font-weight:700;border-top:2px solid var(--pr
 }
 @media print{#app,#toasts{display:none!important}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* منوی کشویی */
+.menu-wrap{position:relative;display:inline-block}
+.menu{position:absolute;inset-inline-start:0;top:calc(100% + 4px);min-width:220px;margin:0;padding:4px;list-style:none;background:var(--card);border:1px solid var(--primary);border-radius:var(--r);box-shadow:0 6px 18px rgba(0,0,0,.14);z-index:70}
+.menu.up{top:auto;bottom:calc(100% + 4px)}
+.menu-item{display:flex;align-items:center;gap:.55rem;width:100%;padding:.5rem .7rem;border:0;background:transparent;border-radius:4px;cursor:pointer;text-align:right}
+.menu-item:hover,.menu-item:focus-visible{background:var(--hover);color:var(--primary)}
+.btn .caret{font-size:.7rem;opacity:.75}
+.sugg{max-height:320px}

@@ -1,5 +1,5 @@
 // Service Worker — پیش‌کش کل برنامه برای کار آفلاین (فهرست با tools/build.mjs ساخته می‌شود)
-const VERSION = '3e16edb135';
+const VERSION = 'b8d316e43e';
 const ASSETS = [
   "./",
   "Sahel-Bold.woff2",

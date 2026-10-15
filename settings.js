@@ -5,6 +5,9 @@ export const FONTS = [
   { id: 'Vazirmatn', label: 'وزیرمتن (Vazirmatn)' },
   { id: 'Sahel', label: 'ساحل (Sahel)' },
   { id: 'Samim', label: 'صمیم (Samim)' },
+  { id: 'B Nazanin', label: 'بی‌نازنین (B Nazanin)', system: true },
+  { id: 'B Mitra', label: 'بی‌میترا (B Mitra)', system: true },
+  { id: 'B Titr', label: 'بی‌تیتر (B Titr)', system: true },
   { id: 'Tahoma', label: 'Tahoma (فونت سیستم)' },
   { id: 'Arial', label: 'Arial (فونت سیستم)' },
 ];
@@ -40,7 +43,7 @@ export const DEFAULT_PRINT = Object.freeze({
   heights: { title: 12, seller: 9, buyer: 9, thead: 11, row: 7, total: 9, box: 12 },
   cellPadding: 1.5,
   orientation: 'landscape', paper: 'A4', margins: { top: 10, right: 10, bottom: 10, left: 10 },
-  lineWidth: 1, totalBoxPos: 'left', showBuyerCode: false, thousandSep: ',', digits: 'fa',
+  lineWidth: 1, totalBoxPos: 'left', showBuyerCode: true, thousandSep: ',', digits: 'fa',
 });
 
 export const DEFAULT_GENERAL = Object.freeze({
@@ -73,6 +76,12 @@ export async function load() {
   let active = await repo.getSetting('activeTemplate', null);
   if (!state.templates.some(t => t.id === active)) active = state.templates[0].id;
   state.activeTemplateId = active;
+  // مهاجرت یک‌باره: کد خریدار در چاپ به‌طور پیش‌فرض نمایش داده شود (الگوهای قبلی با false ذخیره شده بودند)
+  const mig = await repo.getSetting('migrations', {});
+  if (!mig.buyerCodeOn) {
+    for (const t of state.templates) { t.config.showBuyerCode = true; await repo.put('templates', t); }
+    await repo.setSetting('migrations', { ...mig, buyerCodeOn: true });
+  }
   applyTheme();
 }
 export const activeTemplate = () => state.templates.find(t => t.id === state.activeTemplateId) || state.templates[0];
@@ -106,4 +115,13 @@ export function normalizeWidths(w) {
   let imax = 0; a.forEach((v, i) => { if (v > a[imax]) imax = i; });
   a[imax] = Math.round((a[imax] + diff) * 10) / 10;
   return a;
+}
+
+/** آیا فونت سیستمی روی این دستگاه (یا به‌صورت فایل کنار برنامه) در دسترس است؟ */
+export async function fontAvailable(family) {
+  try { await Promise.race([document.fonts.load(`40px "${family}"`, 'مایع'), new Promise(r => setTimeout(r, 800))]); } catch { /* ادامه */ }
+  const c = document.createElement('canvas').getContext('2d');
+  const txt = 'مایع دست شوینده abcdefghij 0123456789';
+  const w = f => { c.font = `40px ${f}`; return c.measureText(txt).width; };
+  return w(`"${family}", monospace`) !== w('monospace') || w(`"${family}", serif`) !== w('serif');
 }

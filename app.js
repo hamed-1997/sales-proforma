@@ -27,9 +27,22 @@ function shell() {
   const online = h('span', { class: 'net', role: 'status' });
   const setNet = () => { online.textContent = navigator.onLine ? 'آنلاین' : 'آفلاین — برنامه بدون اینترنت کار می‌کند'; online.classList.toggle('off', !navigator.onLine); };
   window.addEventListener('online', setNet); window.addEventListener('offline', setNet); setNet();
-  const install = btn('نصب برنامه', { cls: 'sm', ic: 'download', onClick: async () => { if (!deferredInstall) return; deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; install.hidden = true; } });
+  // دکمه‌ی نصب: فقط وقتی برنامه نصب نیست؛ بعد از نصب (یا اجرا در حالت برنامه‌ی نصب‌شده) دیگر نمایش داده نمی‌شود
+  const FLAG = 'proforma-installed';
+  const standalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const wasInstalled = () => { try { return localStorage.getItem(FLAG) === '1'; } catch { return false; } };
+  const markInstalled = () => { try { localStorage.setItem(FLAG, '1'); } catch { /* نادیده */ } };
+  if (standalone()) markInstalled();
+  const install = btn('نصب برنامه', { cls: 'sm', ic: 'download', onClick: async () => {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    const { outcome } = await deferredInstall.userChoice;
+    deferredInstall = null; install.hidden = true;
+    if (outcome === 'accepted') markInstalled();
+  } });
   install.hidden = true;
-  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; install.hidden = false; });
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); if (standalone() || wasInstalled()) return; deferredInstall = e; install.hidden = false; });
+  window.addEventListener('appinstalled', () => { markInstalled(); deferredInstall = null; install.hidden = true; toast('برنامه نصب شد.'); });
   navEl = h('nav', { class: 'nav', 'aria-label': 'ناوبری اصلی' }, NAV.map(([name, href]) =>
     h('a', { href, dataset: { route: name }, class: 'nav-item' }, icon(ROUTES[name].ic), h('span', {}, ROUTES[name].title))));
   view = h('main', { id: 'view', tabindex: -1 });

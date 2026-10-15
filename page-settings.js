@@ -116,7 +116,14 @@ export async function render(view, ctx) {
         h('div', { class: 'reset-all' }, btn('بازگشت همه‌ی تنظیمات این الگو به پیش‌فرض', { cls: 'danger-t', ic: 'trash', onClick: async () => { if (await confirmBox({ title: 'بازگشت به پیش‌فرض', message: 'همه‌ی تنظیمات چاپ این الگو به حالت اولیه برمی‌گردد.', okText: 'بازگشت', danger: true })) { tpl.config = S.clone(S.DEFAULT_PRINT); changed(); build(); } } }))
       );
     }
-    const fontSel = (val, set, allowEmpty) => { const s = h('select', { class: 'input' }, allowEmpty ? h('option', { value: '' }, 'همان فونت سند') : null, S.FONTS.map(f => h('option', { value: f.id, selected: val === f.id }, f.label))); s.addEventListener('change', () => set(s.value)); return s; };
+    const fontSel = (val, set, allowEmpty) => {
+      const sel = h('select', { class: 'input' }, allowEmpty ? h('option', { value: '' }, 'همان فونت سند') : null, S.FONTS.map(f => h('option', { value: f.id, selected: val === f.id, dataset: { sys: f.system ? '1' : '' } }, f.label)));
+      sel.addEventListener('change', () => set(sel.value));
+      S.FONTS.filter(f => f.system).forEach(async f => { // فونت‌های B فقط اگر روی دستگاه نصب باشند کار می‌کنند
+        if (!(await S.fontAvailable(f.id))) { const o = [...sel.options].find(x => x.value === f.id); if (o) o.textContent = f.label + ' — روی این دستگاه نصب نیست'; }
+      });
+      return sel;
+    };
     const sel = (opts, val, set) => { const s = h('select', { class: 'input' }, opts.map(([v, l]) => h('option', { value: v, selected: String(val) === String(v) }, l))); s.addEventListener('change', () => set(s.value)); return s; };
 
     function colWidthsUI() {

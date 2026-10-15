@@ -64,7 +64,7 @@ export function modal({ title, body, actions = [], wide = false, onClose }) {
   const back = h('div', { class: 'modal-back' });
   const box = h('div', { class: `modal${wide ? ' wide' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title });
   const close = (v) => { back.remove(); document.removeEventListener('keydown', onKey, true); prevFocus?.focus?.(); onClose?.(v); };
-  const onKey = e => { if (e.key === 'Escape' && !document.querySelector('.cal-pop')) { e.stopPropagation(); close(); } };
+  const onKey = e => { if (e.key === 'Escape' && !document.querySelector('.cal-pop') && !document.querySelector('.menu:not([hidden])')) { e.stopPropagation(); close(); } };
   box.append(
     h('div', { class: 'modal-head' }, h('h3', {}, title), h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'بستن', onClick: () => close() }, icon('x'))),
     h('div', { class: 'modal-body' }, body),
@@ -160,6 +160,29 @@ export function attachDatePicker(input) {
     pop.style.left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.right - pw)) + 'px';
     document.addEventListener('mousedown', outside, true);
     document.addEventListener('keydown', keyClose, true);
+  });
+  return wrap;
+}
+
+/** دکمه‌ی منوی کشویی: items = [{label, ic, onClick}] */
+export function menuButton(label, items, { ic = '', up = false, cls = '' } = {}) {
+  const list = h('ul', { class: `menu${up ? ' up' : ''}`, role: 'menu', hidden: true });
+  const trigger = h('button', { type: 'button', class: `btn ${cls}`, 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, ic ? icon(ic) : null, h('span', {}, label), h('span', { class: 'caret', 'aria-hidden': 'true' }, '▾'));
+  const wrap = h('span', { class: 'menu-wrap' }, trigger, list);
+  const outside = e => { if (!wrap.contains(e.target)) close(); };
+  const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); trigger.focus(); } };
+  function close() { list.hidden = true; trigger.setAttribute('aria-expanded', 'false'); document.removeEventListener('mousedown', outside, true); document.removeEventListener('keydown', onKey, true); }
+  items.forEach(it => list.append(h('li', { role: 'none' }, h('button', { type: 'button', role: 'menuitem', class: 'menu-item', onClick: () => { close(); it.onClick(); } }, it.ic ? icon(it.ic) : null, h('span', {}, it.label)))));
+  trigger.addEventListener('click', () => {
+    if (!list.hidden) return close();
+    list.hidden = false; trigger.setAttribute('aria-expanded', 'true');
+    document.addEventListener('mousedown', outside, true); document.addEventListener('keydown', onKey, true);
+    list.querySelector('button')?.focus();
+  });
+  list.addEventListener('keydown', e => {
+    const bs = [...list.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); bs[(i + 1) % bs.length].focus(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); bs[(i - 1 + bs.length) % bs.length].focus(); }
   });
   return wrap;
 }

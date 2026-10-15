@@ -3,9 +3,8 @@ import { evaluateRow, sumTotals, parsePercentBP, cartonsX100 } from './calc.js';
 import { formatInt, formatDec, cleanNumberText, toFaDigits } from './format.js';
 import * as J from './jalali.js';
 import * as S from './settings.js';
-import { buildDocument, printHTML, pdfFileName } from './print.js';
-import { h, btn, icon, field, toast, confirmBox, attachDatePicker } from './ui.js';
-import { findProduct, searchProducts, refreshProducts, showPreviewModal } from './page-common.js';
+import { h, btn, icon, field, toast, confirmBox, attachDatePicker, menuButton } from './ui.js';
+import { findProduct, searchProducts, refreshProducts, showPreviewModal, exportItems } from './page-common.js';
 
 let keySeq = 0;
 const newRow = () => ({ key: ++keySeq, code: '', product: null, cans: '', fee: '', discountPct: '', taxPct: '', touched: false });
@@ -95,15 +94,17 @@ export async function render(view, ctx) {
   }
 
   function rowEl(row, idx) {
-    const code = h('input', { class: 'input', dir: 'ltr', autocomplete: 'off', role: 'combobox', 'aria-autocomplete': 'list', placeholder: 'کد کالا', value: row.code });
+    const code = h('input', { class: 'input', dir: 'ltr', autocomplete: 'off', role: 'combobox', 'aria-autocomplete': 'list', placeholder: 'کد یا بخشی از نام کالا', value: row.code });
     code.addEventListener('input', () => { row.code = code.value; row.product = findProduct(code.value); onRowChange(row); showSugg(code, row); });
     code.addEventListener('focus', () => { if (code.value && !row.product) showSugg(code, row); });
-    code.addEventListener('blur', () => { row.touched = true; setTimeout(hideSugg, 120); const p = findProduct(code.value); if (p) { row.product = p; if (code.value !== p.code) { code.value = p.code; row.code = p.code; } } onRowChange(row); });
+    code.addEventListener('blur', () => { row.touched = true; setTimeout(hideSugg, 120); let p = findProduct(code.value);
+      if (!p) { const found = searchProducts(code.value); if (found.length === 1) p = found[0]; } // فقط یک نتیجه‌ی جستجو => خودکار انتخاب
+      if (p) { row.product = p; if (code.value !== p.code) { code.value = p.code; row.code = p.code; } } onRowChange(row); });
     code.addEventListener('keydown', e => {
       if (sugg.hidden || suggFor?.input !== code) return;
       if (e.key === 'ArrowDown') { e.preventDefault(); suggIdx = (suggIdx + 1) % suggItems.length; markSugg(); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); suggIdx = (suggIdx - 1 + suggItems.length) % suggItems.length; markSugg(); }
-      else if (e.key === 'Enter' && suggIdx >= 0) { e.preventDefault(); pick(suggIdx); }
+      else if (e.key === 'Enter') { e.preventDefault(); pick(suggIdx >= 0 ? suggIdx : 0); }
       else if (e.key === 'Escape') { e.stopPropagation(); hideSugg(); }
     });
     const cans = numInput(row, 'cans'), fee = numInput(row, 'fee', { inputmode: G.allowDecimalFee ? 'decimal' : 'numeric' });
@@ -111,6 +112,7 @@ export async function render(view, ctx) {
     dPct.classList.add('pct'); tPct.classList.add('pct');
     dPct.setAttribute('aria-label', 'درصد تخفیف اختصاصی این ردیف'); tPct.setAttribute('aria-label', 'درصد مالیات اختصاصی این ردیف');
     const mk = (cls) => h('span', { class: cls });
+    code.setAttribute('aria-label', 'کد کالا یا بخشی از نام کالا');
     const el = { code, cans, fee, dPct, tPct, idx: h('td', { 'data-label': 'ردیف', class: 'idx' }), desc: mk('desc-t'), cartons: mk('v'), gross: mk('v'), disc: mk('v'), tax: mk('v'), final: mk('v strong'),
       eCode: mk('cell-err'), eCans: mk('cell-err'), eFee: mk('cell-err'), eD: mk('cell-err'), eT: mk('cell-err') };
     const del = h('button', { class: 'icon-btn danger-t', type: 'button', title: 'حذف ردیف', 'aria-label': 'حذف ردیف', onClick: () => removeRow(row) }, icon('trash'));
@@ -158,7 +160,7 @@ export async function render(view, ctx) {
       if (filled) n++;
       e.idx.textContent = filled ? toFaDigits(n) : '';
       e.desc.textContent = r.product ? r.product.name : '';
-      const showErr = k => (r.touched || submitted || String(r[k] ?? '').trim() !== '') ? res.errors[k] || '' : '';
+      const showErr = k => (k === 'code' ? (r.touched || submitted) : (r.touched || submitted || String(r[k] ?? '').trim() !== '')) ? res.errors[k] || '' : '';
       const map = { code: 'eCode', cans: 'eCans', fee: 'eFee', discountPct: 'eD', taxPct: 'eT' };
       const inp = { code: e.code, cans: e.cans, fee: e.fee, discountPct: e.dPct, taxPct: e.tPct };
       for (const k of Object.keys(map)) {
@@ -273,8 +275,7 @@ export async function render(view, ctx) {
     return true;
   }
   const preview = () => { if (ensurePrintable()) showPreviewModal(printModel()); };
-  const doPrint = () => { if (!ensurePrintable()) return; const m = printModel(); printHTML(buildDocument(m, S.activeTemplate().config), pdfFileName(m)); };
-  const saveAndPrint = async () => { if (!ensurePrintable()) return; const s = await save(); if (s) { const m = { ...s, currency: G.currency }; printHTML(buildDocument(m, S.activeTemplate().config), pdfFileName(m)); } };
+  const exportModel = () => (ensurePrintable() ? printModel() : null);
   async function fresh() {
     if (dirty && (draft.buyerName.trim() || draft.rows.some(r => r.code || r.cans || r.fee)) && !await confirmBox({ title: 'پیش‌فاکتور تازه', message: 'تغییرات ذخیره‌نشده از بین می‌رود. ادامه می‌دهید؟', okText: 'ادامه' })) return;
     dirty = false; history.replaceState(null, '', '#/invoice'); ctx.rerender();
@@ -282,11 +283,10 @@ export async function render(view, ctx) {
 
   titleEl = h('h2', {}, draft.id ? `ویرایش پیش‌فاکتور شماره ${formatInt(draft.number)}` : 'پیش‌فاکتور جدید');
   const actions = h('div', { class: 'actions' },
+    btn('پیش‌نمایش', { ic: 'eye', onClick: preview }),
+    menuButton('خروجی', exportItems(exportModel), { ic: 'download' }),
     btn('ذخیره', { cls: 'primary', ic: 'save', onClick: save }),
-    btn('ذخیره و چاپ', { ic: 'print', onClick: saveAndPrint }),
-    btn('پیش‌نمایش چاپ', { ic: 'eye', onClick: preview }),
-    btn('چاپ / PDF', { ic: 'print', onClick: doPrint }),
-    btn('پیش‌فاکتور تازه', { ic: 'plus', onClick: fresh }));
+    btn('پیش‌فاکتور جدید', { ic: 'plus', onClick: fresh }));
 
   mbarTotal = h('strong', {});
   const mbar = h('div', { class: 'mbar' }, h('span', {}, 'مبلغ نهایی (ریال)'), mbarTotal);
