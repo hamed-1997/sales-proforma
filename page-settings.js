@@ -5,6 +5,7 @@ import * as S from './settings.js';
 import { buildDocument } from './print.js';
 import { h, btn, icon, field, toast, confirmBox, promptBox, download } from './ui.js';
 import { mountPreview } from './page-common.js';
+import { APP_VERSION, runUpdate } from './update.js';
 import { refreshProducts } from './page-common.js';
 
 const SAMPLE = () => {
@@ -24,7 +25,7 @@ export async function render(view, ctx) {
   const bar = h('div', { class: 'tabs', role: 'tablist' });
   const drawTabs = () => bar.replaceChildren(...tabs.map(([id, l]) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(tab === id), class: tab === id ? 'on' : '', onClick: () => { tab = id; drawTabs(); draw(); } }, l)));
   function draw() { body.replaceChildren(); (tab === 'general' ? general : tab === 'print' ? printTab : backup)(body); }
-  view.replaceChildren(h('div', { class: 'page-head' }, h('h2', {}, 'تنظیمات')), bar, body);
+  view.replaceChildren(h('div', { class: 'page-head' }, h('div', {}, h('h2', {}, 'تنظیمات'), h('div', { class: 'sub' }, ctx.def.sub))), bar, body);
   drawTabs(); draw();
 
   // ---------------- عمومی ----------------
@@ -35,9 +36,8 @@ export async function render(view, ctx) {
     const dd = inp('defaultDiscountPct', { dir: 'ltr', inputmode: 'decimal' }), dt = inp('defaultTaxPct', { dir: 'ltr', inputmode: 'decimal' });
     const currency = inp('currency');
     const round = h('select', { class: 'input' }, [['half-up', 'گرد معمولی (نیم به بالا)'], ['floor', 'حذف اعشار (کف)'], ['banker', 'گرد بانکی']].map(([v, l]) => h('option', { value: v, selected: G.rounding === v }, l)));
-    const theme = h('select', { class: 'input' }, [['light', 'روشن'], ['dark', 'تیره']].map(([v, l]) => h('option', { value: v, selected: G.theme === v }, l)));
     const dec = h('input', { type: 'checkbox', checked: G.allowDecimalFee });
-    const fs = { company: field('نام شرکت (فروشنده)', company), taxMax: field('سقف مجاز درصد مالیات', taxMax), start: field('شماره‌ی شروع پیش‌فاکتور', start, { hint: 'شماره‌ها پشت‌سرهم و بدون تکرار داده می‌شوند.' }), dd: field('درصد تخفیف کلی پیش‌فرض', dd), dt: field('درصد مالیات کلی پیش‌فرض', dt), currency: field('واحد پول', currency), round: field('روش گردکردن', round, { hint: 'برای تطبیق با سامانه‌ی فعلی خود انتخاب کنید.' }), theme: field('پوسته', theme) };
+    const fs = { company: field('نام شرکت (فروشنده)', company, { hint: 'روی پیش‌فاکتور چاپ می‌شود.' }), taxMax: field('سقف مجاز درصد مالیات', taxMax), start: field('شماره‌ی شروع پیش‌فاکتور', start, { hint: 'شماره‌ها پشت‌سرهم و بدون تکرار داده می‌شوند.' }), dd: field('درصد تخفیف کلی پیش‌فرض', dd), dt: field('درصد مالیات کلی پیش‌فرض', dt), currency: field('واحد پول', currency), round: field('روش گردکردن', round, { hint: 'برای تطبیق با سامانه‌ی فعلی خود انتخاب کنید.' }) };
     const save = async () => {
       const { parsePercentBP } = await import('./calc.js');
       const { parseUInt } = await import('./format.js');
@@ -48,12 +48,20 @@ export async function render(view, ctx) {
       const t1 = parsePercentBP(dt.value, tm.ok ? tm.bp : 10000); if (!t1.ok) { fs.dt.setError(t1.error || 'الزامی است.'); ok = false; } else fs.dt.setError('');
       if (!currency.value.trim()) { fs.currency.setError('الزامی است.'); ok = false; } else fs.currency.setError('');
       if (!ok) return;
-      Object.assign(G, { companyName: company.value.trim(), taxMaxPct: tm.bp / 100, startNumber: sn.value, defaultDiscountPct: String(d1.bp / 100), defaultTaxPct: String(t1.bp / 100), currency: currency.value.trim(), rounding: round.value, theme: theme.value, allowDecimalFee: dec.checked });
+      Object.assign(G, { companyName: company.value.trim(), taxMaxPct: tm.bp / 100, startNumber: sn.value, defaultDiscountPct: String(d1.bp / 100), defaultTaxPct: String(t1.bp / 100), currency: currency.value.trim(), rounding: round.value, allowDecimalFee: dec.checked });
       await S.saveGeneral(); ctx.refreshShell(); toast('تنظیمات ذخیره شد.');
     };
-    root.append(h('section', { class: 'card' }, h('div', { class: 'form-grid' }, Object.values(fs),
-      h('label', { class: 'field check' }, dec, h('span', {}, 'اجازه‌ی فی اعشاری (حداکثر ۲ رقم)'))),
-      h('div', { class: 'actions' }, btn('ذخیره‌ی تنظیمات', { cls: 'primary', ic: 'save', onClick: save }))));
+    const upd = btn('به‌روزرسانی برنامه', { cls: 'primary', ic: 'refresh', onClick: () => runUpdate(upd) });
+    root.append(
+      h('div', { class: 'set-grid' },
+        h('section', { class: 'card' }, h('div', { class: 'card-head' }, h('div', { class: 'card-title' }, icon('building'), 'اطلاعات شرکت')), h('div', { class: 'form-grid one' }, fs.company, fs.start)),
+        h('section', { class: 'card' }, h('div', { class: 'card-head' }, h('div', { class: 'card-title' }, icon('chart'), 'تنظیمات مالی')),
+          h('div', { class: 'form-grid' }, fs.currency, fs.taxMax, fs.dd, fs.dt, fs.round, h('label', { class: 'field check' }, dec, h('span', {}, 'اجازه‌ی فی اعشاری (حداکثر ۲ رقم)'))))),
+      h('div', { class: 'actions', style: { marginBottom: '1.1rem' } }, btn('ذخیره‌ی تنظیمات', { cls: 'primary', ic: 'save', onClick: save })),
+      h('section', { class: 'card' }, h('div', { class: 'card-title', style: { marginBottom: '.8rem' } }, icon('info'), 'درباره و به‌روزرسانی'),
+        h('div', { class: 'about' }, h('img', { src: 'logo-full.png', alt: 'Sales Proforma' }),
+          h('div', {}, h('div', { class: 'strong', dir: 'ltr' }, `Sales Proforma  v${APP_VERSION}`),
+            h('p', { class: 'muted', style: { margin: '.3rem 0 .8rem' } }, 'اگر فایل‌های برنامه را در GitHub به‌روز کرده‌اید، این دکمه نسخه‌ی جدید را می‌گیرد و برنامه را دوباره بارگذاری می‌کند. اطلاعات شما (کالاها و پیش‌فاکتورها) دست‌نخورده می‌ماند.'), upd))));
   }
 
   // ---------------- پشتیبان ----------------
@@ -103,6 +111,7 @@ export async function render(view, ctx) {
     function build() {
       form.replaceChildren(
         templates(),
+        section('عنوان و فاصله‌ها', titleGapsUI(), () => { C().titleText = S.DEFAULT_PRINT.titleText; C().gaps = S.clone(S.DEFAULT_PRINT.gaps); }),
         section('فونت', h('div', { class: 'form-grid one' },
           field('فونت سند', fontSel(C().fontFamily, v => { C().fontFamily = v; changed(); })),
           field('فونت عنوان (اختیاری)', fontSel(C().titleFont, v => { C().titleFont = v; changed(); }, true))), reset('fontFamily', 'titleFont')),
@@ -125,6 +134,18 @@ export async function render(view, ctx) {
       return sel;
     };
     const sel = (opts, val, set) => { const s = h('select', { class: 'input' }, opts.map(([v, l]) => h('option', { value: v, selected: String(val) === String(v) }, l))); s.addEventListener('change', () => set(s.value)); return s; };
+
+    function titleGapsUI() {
+      const t = h('input', { class: 'input', value: C().titleText, placeholder: 'پیش فاکتور فروش کالا' });
+      t.addEventListener('input', () => { C().titleText = t.value; changed(); });
+      const rows = S.GAP_SECTIONS.map(([k, l]) => {
+        const i = num(() => C().gaps[k], v => { C().gaps[k] = v; changed(); }, { min: 0, max: 40, step: 0.5 });
+        return h('div', { class: 'prow' }, h('span', {}, l), i, h('span', { class: 'u' }, 'mm'),
+          btn('یک سطر خالی', { cls: 'sm', onClick: () => { C().gaps[k] = C().heights.row; i.value = C().heights.row; i.classList.remove('err'); changed(); } }));
+      });
+      return h('div', {}, field('عنوان بالای پیش‌فاکتور', t, { hint: 'اگر خالی بماند، «پیش فاکتور فروش کالا» چاپ می‌شود.' }),
+        h('p', { class: 'muted small', style: { margin: '.8rem 0 .3rem' } }, 'فاصله‌ی خالی بین بخش‌ها (۰ = بدون فاصله):'), h('div', { class: 'rows' }, rows));
+    }
 
     function colWidthsUI() {
       const sum = h('div', { class: 'wsum' }), inputs = [];

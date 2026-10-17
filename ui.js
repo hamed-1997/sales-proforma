@@ -38,12 +38,30 @@ export function icon(name) {
     download: 'M12 4v12M7 11l5 5 5-5M4 20h16',
     cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
     x: 'M6 6l12 12M18 6L6 18',
+    refresh: 'M21 12a9 9 0 11-3-6.7M21 4v5h-5',
+    chart: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
+    check: 'M5 12l5 5L20 7',
+    info: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 16v-5M12 8h.01',
+    alert: 'M12 3l10 18H2L12 3zM12 10v5M12 18h.01',
+    file: 'M14 3H6v18h12V7l-4-4zM14 3v4h4M9 13h6M9 17h6',
+    building: 'M4 21V5l8-3 8 3v16M9 9h.01M15 9h.01M9 13h.01M15 13h.01M10 21v-4h4v4',
+    layers: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5',
+    clock: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2',
   };
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'ic'); s.setAttribute('aria-hidden', 'true');
   const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   p.setAttribute('d', paths[name] || ''); s.append(p);
   return s;
+}
+
+/** شمارش پویا تا مقدار نهایی (در حالت کاهش حرکت، فوری) */
+export function countUp(el, to, fmt = v => String(v), ms = 700) {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || !to) { el.textContent = fmt(to); return; }
+  const t0 = performance.now();
+  const tick = now => { const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(Math.round(to * e)); if (k < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
 }
 
 export function btn(label, { cls = '', ic = '', onClick, type = 'button', title } = {}) {
@@ -53,7 +71,7 @@ export function btn(label, { cls = '', ic = '', onClick, type = 'button', title 
 export function toast(msg, kind = 'ok') {
   let box = document.getElementById('toasts');
   if (!box) { box = h('div', { id: 'toasts', role: 'status', 'aria-live': 'polite' }); document.body.append(box); }
-  const t = h('div', { class: `toast ${kind}` }, msg);
+  const t = h('div', { class: `toast ${kind}`, role: kind === 'err' ? 'alert' : 'status' }, icon(kind === 'err' ? 'alert' : 'check'), h('span', {}, msg));
   box.append(t);
   setTimeout(() => t.classList.add('out'), kind === 'err' ? 6000 : 3000);
   setTimeout(() => t.remove(), kind === 'err' ? 6400 : 3400);

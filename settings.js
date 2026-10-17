@@ -27,12 +27,18 @@ export const FONT_SECTIONS = [
   ['total', 'ردیف «مجموع»'],
   ['box', 'کادر «جمع مبلغ» انتهایی'],
 ];
+export const GAP_SECTIONS = [
+  ['titleSeller', 'بین عنوان و ردیف فروشنده'], ['sellerBuyer', 'بین ردیف فروشنده و خریدار'],
+  ['buyerItems', 'بین ردیف خریدار و جدول کالاها'], ['itemsBox', 'بین جدول و کادر «جمع مبلغ»'],
+];
 export const HEIGHT_SECTIONS = [
   ['title', 'کادر عنوان'], ['seller', 'ردیف فروشنده'], ['buyer', 'ردیف خریدار'],
   ['thead', 'سربرگ جدول'], ['row', 'ردیف‌های کالا'], ['total', 'ردیف مجموع'], ['box', 'کادر انتهایی'],
 ];
 
 export const DEFAULT_PRINT = Object.freeze({
+  titleText: 'پیش فاکتور فروش کالا',
+  gaps: { titleSeller: 0, sellerBuyer: 0, buyerItems: 0, itemsBox: 0 }, // فاصله‌ی بین بخش‌ها (mm)؛ ۰ = چسبیده
   fontFamily: 'Vazirmatn', titleFont: '',
   fonts: {
     title: { size: 18, bold: true }, seller: { size: 11, bold: true }, buyer: { size: 11, bold: true },
@@ -48,7 +54,7 @@ export const DEFAULT_PRINT = Object.freeze({
 
 export const DEFAULT_GENERAL = Object.freeze({
   companyName: '', currency: 'ریال', taxMaxPct: 100, rounding: 'half-up', startNumber: 1,
-  allowDecimalFee: false, theme: 'light', defaultDiscountPct: '0', defaultTaxPct: '10',
+  allowDecimalFee: false, defaultDiscountPct: '0', defaultTaxPct: '10',
 });
 
 export const clone = o => JSON.parse(JSON.stringify(o));
@@ -99,7 +105,7 @@ export async function removeTemplate(id) {
   if (state.activeTemplateId === id) await setActive(state.templates[0].id);
   return true;
 }
-export function applyTheme() { document.documentElement.dataset.theme = state.general.theme === 'dark' ? 'dark' : 'light'; }
+export function applyTheme() { document.documentElement.dataset.theme = 'light'; } // فقط پوسته‌ی روشن
 
 /** نرمال‌سازی عرض ستون‌ها: مجموع ۱۰۰٪ و هیچ ستون کمتر از حداقل */
 export function normalizeWidths(w) {

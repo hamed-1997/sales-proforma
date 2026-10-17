@@ -1,5 +1,5 @@
 // ماژول print — ساخت سند چاپی (قالب مشترک برای پیش‌نمایش، چاپ/PDF و تصویر)
-import { formatInt, formatDec, toFaDigits } from './format.js';
+import { formatInt, formatDec, lineLabel } from './format.js';
 import { PAPERS, FONT_STACK } from './settings.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -65,6 +65,9 @@ export function buildDocument(model, cfg, { preview = false, image = false, font
   const paperName = cfg.paper === 'Letter' ? 'letter' : cfg.paper;
   const boxJustify = { left: 'flex-end', center: 'center', right: 'flex-start' }[cfg.totalBoxPos] || 'flex-end'; // در RTL: flex-end = چپ
   const families = [...new Set([cfg.fontFamily, cfg.titleFont || cfg.fontFamily])];
+  // فاصله‌ی بین بخش‌ها: ۰ = چسبیده (خطوط هم‌پوشانی دارند)، بیشتر از ۰ = فاصله‌ی خالی به میلی‌متر
+  const g = k => { const v = Number(cfg.gaps?.[k]) || 0; return v > 0 ? `${v}mm` : `-${lw}px`; };
+  const gapCss = `.seller{margin-top:${g('titleSeller')}}\n.buyer{margin-top:${g('sellerBuyer')}}\n.items{margin-top:${g('buyerItems')}}\n.boxwrap{margin-top:${g('itemsBox')}}\n`;
 
   const rows = model.rows;
   const keepFrom = Math.max(0, rows.length - 2);
@@ -89,9 +92,9 @@ export function buildDocument(model, cfg, { preview = false, image = false, font
   const heads = ['ردیف', 'شرح کالا', 'تعداد<br/>(کارتن)', 'تعداد<br/>(قوطی)', 'فی<br/>(ریال)', 'مبلغ', 'تخفیف', 'مالیات', 'جمع کل<br/>با مالیات'];
 
   const sheet = `<div class="sheet">
-<table class="title"><tr><td>پیش فاکتور فروش کالا</td></tr></table>
+<table class="title"><tr><td>${esc(cfg.titleText || 'پیش فاکتور فروش کالا')}</td></tr></table>
 <table class="seller"><colgroup><col style="width:52%"><col style="width:18%"><col style="width:30%"></colgroup>
-<tr><td class="name">نام فروشنده: ${esc(model.sellerName)}</td><td>لاین فروش: ${esc(toFaDigits(model.line))}</td><td>تاریخ پیش فاکتور: <span dir="ltr" style="unicode-bidi:isolate">${esc(model.date)}</span></td></tr></table>
+<tr><td class="name">نام فروشنده: ${esc(model.sellerName)}</td><td>${esc(lineLabel(model.line))}</td><td>تاریخ پیش فاکتور: <span dir="ltr" style="unicode-bidi:isolate">${esc(model.date)}</span></td></tr></table>
 ${buyerRow}
 <table class="items">${colgroup}
 <thead><tr>${heads.map(x => `<th>${x}</th>`).join('')}</tr></thead>
@@ -130,8 +133,7 @@ td.sp,td.pc{border:0;padding:0}
 .seller td{height:${h.seller}mm;${cls('seller')}}
 .buyer td{height:${h.buyer}mm;${cls('buyer')};text-align:right}
 .seller td.name{text-align:right}
-.sheet > table + table{margin-top:-${lw}px}
-.items thead{display:table-header-group}
+${gapCss}.items thead{display:table-header-group}
 .items thead th{height:${h.thead}mm;${cls('thead')}}
 .items tbody tr{break-inside:avoid;page-break-inside:avoid}
 .items td{height:${h.row}mm}
@@ -139,7 +141,7 @@ td.sp,td.pc{border:0;padding:0}
 .items tr.keep{break-after:avoid;page-break-after:avoid}
 .items tr.total{break-before:avoid;page-break-before:avoid;break-inside:avoid}
 .items tr.total td{height:${h.total}mm;${cls('total')}}
-.boxwrap{display:flex;justify-content:${boxJustify};break-before:avoid;page-break-before:avoid;break-inside:avoid;margin-top:-${lw}px}
+.boxwrap{display:flex;justify-content:${boxJustify};break-before:avoid;page-break-before:avoid;break-inside:avoid}
 .box{border:${lw}px solid #000;min-width:38%;padding:${pad}mm 4mm;height:${h.box}mm;display:flex;align-items:center;justify-content:center;${cls('box')}}
 ${modeCss}
 </style></head><body><div id="root">${content}</div></body></html>`;

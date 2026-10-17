@@ -65,3 +65,7 @@ export function formatPct(bp, digits = 'fa') {
 export function normSearch(s) {
   return toEnDigits(s).toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/\u200c/g, ' ').trim();
 }
+
+/** نام لاین به‌صورت حروفی: ۱ → «لاین یک»، ۲ → «لاین دو» */
+export const lineWord = l => ({ '1': 'یک', '2': 'دو' }[String(l)] || String(l));
+export const lineLabel = l => `لاین ${lineWord(l)}`;

@@ -56,7 +56,7 @@ export async function render(view, ctx) {
   }
 
   // ---------- ساخت رابط ----------
-  let tbody, tfoot, summaryEls = {}, mbarTotal, fHead = {}, titleEl, saveBtns = [];
+  let tbody, tfoot, summaryEls = {}, fHead = {}, titleEl, saveBtns = [];
   const sugg = h('ul', { class: 'sugg', role: 'listbox', hidden: true });
   document.body.append(sugg);
   ctx.onLeave(() => sugg.remove());
@@ -187,7 +187,7 @@ export async function render(view, ctx) {
     tfoot.cartons.textContent = formatDec(t.cartons); tfoot.cans.textContent = I(t.cans); tfoot.gross.textContent = I(t.gross);
     tfoot.disc.textContent = I(t.discount); tfoot.tax.textContent = I(t.tax); tfoot.final.textContent = I(t.final);
     summaryEls.gross.textContent = I(t.gross); summaryEls.disc.textContent = I(t.discount); summaryEls.net.textContent = I(t.net);
-    summaryEls.tax.textContent = I(t.tax); summaryEls.final.textContent = I(t.grand); mbarTotal.textContent = I(t.grand);
+    summaryEls.tax.textContent = I(t.tax); { const fin = I(t.grand); if (summaryEls.final.textContent !== fin) { summaryEls.final.textContent = fin; summaryEls.final.classList.remove('tick'); void summaryEls.final.offsetWidth; summaryEls.final.classList.add('tick'); } }
     summaryEls.warn.hidden = t.consistent;
   }
 
@@ -288,20 +288,19 @@ export async function render(view, ctx) {
     btn('ذخیره', { cls: 'primary', ic: 'save', onClick: save }),
     btn('پیش‌فاکتور جدید', { ic: 'plus', onClick: fresh }));
 
-  mbarTotal = h('strong', {});
-  const mbar = h('div', { class: 'mbar' }, h('span', {}, 'مبلغ نهایی (ریال)'), mbarTotal);
 
   view.replaceChildren(
-    h('div', { class: 'page-head' }, titleEl, actions),
-    h('section', { class: 'card' }, h('div', { class: 'form-grid' },
+    h('div', { class: 'page-head' }, h('div', {}, titleEl, h('div', { class: 'sub' }, ctx.def.sub)), actions),
+    h('section', { class: 'card' }, h('div', { class: 'card-head' }, h('div', { class: 'card-title' }, icon('file'), 'اطلاعات پیش‌فاکتور')), h('div', { class: 'form-grid' },
       field('فروشنده', sellerInput), field('لاین فروش', lineSeg), dateField, fHead.buyerName,
       field('کد خریدار', buyerCodeIn, { hint: 'اختیاری' }), fHead.discountPct, fHead.taxPct)),
     h('section', { class: 'card flush items-card' },
+      h('div', { class: 'card-head', style: { padding: '1rem 1.3rem 0' } }, h('div', { class: 'card-title' }, icon('layers'), 'اقلام پیش‌فاکتور', h('small', {}, '(فی = قیمت یک قوطی؛ درصد خالی در هر ردیف = درصد کلی)'))),
       h('div', { class: 'tbl-wrap items-wrap' }, h('table', { class: 'tbl items-tbl' },
         h('thead', {}, h('tr', {}, heads.map(x => h('th', {}, x)))), tbody, tfootEl)),
       h('div', { class: 'items-foot' }, btn('افزودن کالا', { ic: 'plus', onClick: () => addRow(true) }),
-        h('span', { class: 'muted small' }, 'فی قیمت یک قوطی است. درصد خالی در هر ردیف = درصد کلی.'))),
-    summary, mbar,
+        h('span', { class: 'muted small' }, 'کد یا بخشی از نام کالا را تایپ کنید؛ همه‌ی کالاهای مطابق پیشنهاد داده می‌شود.'))),
+    summary,
   );
   buildRows();
   dirty = ctx.query.get('from') ? true : false;

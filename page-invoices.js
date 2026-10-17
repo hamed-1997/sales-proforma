@@ -1,5 +1,5 @@
 import { repo } from './db.js';
-import { formatInt, toFaDigits, normSearch } from './format.js';
+import { formatInt, normSearch, lineLabel } from './format.js';
 import * as J from './jalali.js';
 import * as S from './settings.js';
 import { buildDocument, printHTML, pdfFileName, modelFromInvoice } from './print.js';
@@ -35,16 +35,16 @@ export async function render(view, { go }) {
     page = Math.min(page, pages);
     count.textContent = `${formatInt(list.length)} پیش‌فاکتور`;
     tbody.replaceChildren(...(list.slice((page - 1) * PER, page * PER).map(i => h('tr', {},
-      h('td', {}, formatInt(i.number)), h('td', { dir: 'ltr' }, i.date), h('td', {}, toFaDigits(i.line)),
+      h('td', {}, h('span', { class: 'badge' }, formatInt(i.number))), h('td', { dir: 'ltr' }, i.date), h('td', {}, lineLabel(i.line)),
       h('td', { class: 'desc' }, i.buyerName, i.buyerCode ? h('span', { class: 'muted small' }, ` (${i.buyerCode})`) : null),
-      h('td', { class: 'num' }, formatInt(i.totals.final)),
+      h('td', {}, formatInt(i.rows.length)), h('td', { class: 'num strong' }, formatInt(i.totals.final)),
       h('td', { class: 'acts' },
         ib('eye', 'مشاهده', () => showPreviewModal({ ...modelFromInvoice(i), currency: i.currency || S.state.general.currency }, { extraActions: [btn('ویرایش', { ic: 'edit', onClick: () => go(`#/invoice/${i.id}`) })] })),
         ib('edit', 'ویرایش', () => go(`#/invoice/${i.id}`)),
         ib('copy', 'ساخت نسخه‌ی جدید از روی این', () => go(`#/invoice?from=${i.id}`)),
         ib('print', 'چاپ', () => { const m = { ...modelFromInvoice(i), currency: i.currency || S.state.general.currency }; printHTML(buildDocument(m, S.activeTemplate().config), pdfFileName(m)); }),
         ib('trash', 'حذف', () => remove(i), true))))
-      .concat(list.length ? [] : [h('tr', {}, h('td', { colspan: 6, class: 'empty-cell' }, all.length ? 'پیش‌فاکتوری با این فیلتر پیدا نشد.' : 'هنوز پیش‌فاکتوری ثبت نشده است.'))])));
+      .concat(list.length ? [] : [h('tr', {}, h('td', { colspan: 7, class: 'empty-cell' }, all.length ? 'پیش‌فاکتوری با این فیلتر پیدا نشد.' : 'هنوز پیش‌فاکتوری ثبت نشده است.'))])));
     pager.replaceChildren(...(pages > 1 ? [btn('قبلی', { onClick: () => { page--; draw(); } }), h('span', {}, `صفحه ${formatInt(page)} از ${formatInt(pages)}`), btn('بعدی', { onClick: () => { page++; draw(); } })] : []));
     if (pager.children[0]) { if (page <= 1) pager.children[0].setAttribute('disabled', ''); if (page >= pages) pager.children[2].setAttribute('disabled', ''); }
   }
@@ -58,10 +58,10 @@ export async function render(view, { go }) {
   from.addEventListener('change', () => { f.from = from.value; page = 1; draw(); }); to.addEventListener('change', () => { f.to = to.value; page = 1; draw(); });
 
   view.replaceChildren(
-    h('div', { class: 'page-head' }, h('h2', {}, 'پیش‌فاکتورها'), btn('پیش‌فاکتور جدید', { cls: 'primary', ic: 'plus', onClick: () => go('#/invoice') })),
+    h('div', { class: 'page-head' }, h('div', {}, h('h2', {}, 'فهرست پیش‌فاکتورها'), h('div', { class: 'sub' }, 'جست‌وجو، ویرایش، تکثیر و چاپ اسناد')), btn('پیش‌فاکتور جدید', { cls: 'primary', ic: 'plus', onClick: () => go('#/invoice') })),
     h('div', { class: 'toolbar wrap' }, q, from, to, line, sort, count),
     h('section', { class: 'card flush' }, h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' },
-      h('thead', {}, h('tr', {}, ['شماره', 'تاریخ', 'لاین', 'خریدار', 'مبلغ نهایی (ریال)', ''].map(x => h('th', {}, x)))), tbody))),
+      h('thead', {}, h('tr', {}, ['شماره', 'تاریخ', 'لاین', 'خریدار', 'ردیف', 'مبلغ نهایی (ریال)', ''].map(x => h('th', {}, x)))), tbody))),
     pager,
   );
   attachDatePicker(from); attachDatePicker(to);

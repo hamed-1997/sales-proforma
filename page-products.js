@@ -95,7 +95,7 @@ export async function render(view) {
   fileIn.addEventListener('change', () => { if (fileIn.files[0]) importFile(fileIn.files[0]); fileIn.value = ''; });
 
   view.replaceChildren(
-    h('div', { class: 'page-head' }, h('h2', {}, 'بانک کالا'), btn('افزودن کالا', { cls: 'primary', ic: 'plus', onClick: () => edit(null) })),
+    h('div', { class: 'page-head' }, h('div', {}, h('h2', {}, 'بانک کالا'), h('div', { class: 'sub' }, 'مدیریت کالاها، واردکردن و خروجی Excel')), btn('افزودن کالا', { cls: 'primary', ic: 'plus', onClick: () => edit(null) })),
     h('div', { class: 'toolbar' }, search,
       btn('ورود از Excel', { ic: 'upload', onClick: () => fileIn.click() }),
       btn('فایل نمونه', { ic: 'download', onClick: downloadSample }),
